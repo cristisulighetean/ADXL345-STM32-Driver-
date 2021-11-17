@@ -32,11 +32,12 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define SAMPLE_TIME_LOG_MS 100
+#define SAMPLE_TIME_LED_MS 500
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -48,7 +49,9 @@
 I2C_HandleTypeDef hi2c1;
 
 /* USER CODE BEGIN PV */
+ADXL345 acc;
 
+uint8_t accDataReady;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -61,7 +64,14 @@ static void MX_I2C1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 
+	if(GPIO_Pin == ACC_INT){
+
+		/* Set data ready flag (checked in main while() loop) */
+		accDataReady = 1;
+	}
+}
 /* USER CODE END 0 */
 
 /**
@@ -96,15 +106,53 @@ int main(void)
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
 
+  /* Initialise accelerometer */
+  ADXL345_Initialise(&acc, &hi2c1);
+
+  /* USB data buffer */
+  char usbBuf[64];
+
+  /* Timers */
+  uint32_t timerLog;
+  uint32_t timerLED;
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  accDataReady = 0;
+
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+	  /* Sample accelerometer if data ready flag has been set via interrupt */
+	  if(accDataReady){
+
+		  /* Clear flag */
+		  accDataReady = 0;
+	  }
+
+	  /* Send accelerometer readings via virtual COM port (USB) */
+	  if ((HAL_GetTick() - timerLog) >= SAMPLE_TIME_LOG_MS){
+
+		  ADXL345_ReadTemperature(&acc);
+
+		  // TODO implement logging via COM PORT
+
+		  timerLog += SAMPLE_TIME_LOG_MS;
+	  }
+
+	  /* Toggle LED */
+	  if ((HAL_GetTick() - timerLED) >= SAMPLE_TIME_LED_MS){
+
+		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+
+		  timerLED += SAMPLE_TIME_LED_MS;
+	  }
+
   }
   /* USER CODE END 3 */
 }
@@ -203,7 +251,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED_Pin_GPIO_Port, LED_Pin_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -225,12 +273,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : LED_Pin */
-  GPIO_InitStruct.Pin = LED_Pin;
+  /*Configure GPIO pin : LED_Pin_Pin */
+  GPIO_InitStruct.Pin = LED_Pin_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(LED_Pin_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
