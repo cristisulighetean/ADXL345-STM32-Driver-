@@ -7,9 +7,8 @@
  *
  */
 
-/* Include in case we have already
- * included the driver files somewhere
- * else
+/* Include in case we have already added the driver
+ * files somewhere else
  */
 #ifndef ADXL345_I2C_DRIVER_H
 #define ADXL345_I2C_DRIVER_H
@@ -22,9 +21,9 @@
  * DEFINES
  */
 
-/*
- * This address is 7bit and we have to shift
- * it 1 bit to the left in order to account for
+/* I2C DEVICE ADDRESS
+ * The address is  7bit and we have to shift it
+ * 1 bit to the left in order to account for
  * the read/write bit
  */
 #define ADXL345_I2C_ADDR	(0x1D << 1)
@@ -33,14 +32,13 @@
  * or 0x53 if ALT_ADDRESS pin = 0 (p.18)
  */
 
-// Device ID is located in the first register
+// Device ID
 #define ADXL345_DEVID		0xE5
 
 /*
  * REGISTERS (p.24)
  */
 #define ADXL345_REG_DEVID			0x00
-#define ADXL345_REG_THRESH_TAP		0x1D
 #define ADXL345_REG_OFSX			0x1E
 #define ADXL345_REG_OFSY			0x1F
 #define ADXL345_REG_OFSZ			0x20
@@ -62,7 +60,6 @@
 #define ADXL345_REG_FIFO_CTL		0x38
 #define ADXL345_REG_FIFO_STATUS		0x39
 
-
 /*
  * SENSOR STRUCT
  */
@@ -74,26 +71,23 @@ typedef struct {
 	/* Acceleration data (X, Y, Z) in m/s^2 */
 	float acc_mps2[3];
 
-	/* Temperature in degC */
-	float temp_C;
-
 }ADXL345;
 
 /*
  * INITIALISATION
  */
-uin8_t ADXL345_Initialise(ADXL345 *dev, I2C_HandleTypeDef *i2cHandle);
+uint8_t ADXL345_Initialise(ADXL345 *dev, I2C_HandleTypeDef *i2cHandle);
 
 /*
  * DATA AQUISITION
  */
-HAL_StatusTypeDef ADXL345_ReadTemperature(ADXL345 *dev);
 HAL_StatusTypeDef ADXL345_ReadAcceleration(ADXL345 *dev);
 
 /*
  * LOW-LEVEL FUNCTIONS
  */
 HAL_StatusTypeDef ADXL345_ReadRegister(ADXL345 *dev, uint8_t reg, uint8_t *data);
+
 HAL_StatusTypeDef ADXL345_ReadRegisters(ADXL345 *dev, uint8_t reg, uint8_t *data, uint8_t len);
 
 HAL_StatusTypeDef ADXL345_WriteRegister(ADXL345 *dev, uint8_t reg, uint8_t *data);

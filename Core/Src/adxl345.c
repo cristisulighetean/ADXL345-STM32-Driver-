@@ -7,7 +7,10 @@
 
 #include "adxl345.h"
 
-uin8_t ADXL345_Initialise(ADXL345 *dev, I2C_HandleTypeDef *i2cHandle){
+/* Conversion constant for 4g range and 10 bits resolution */
+#define CONST4G10B			0.076640625f
+
+uint8_t ADXL345_Initialise(ADXL345 *dev, I2C_HandleTypeDef *i2cHandle){
 
 	/* Set struct parameters */
 	dev->i2cHandle 			= i2cHandle;
@@ -16,43 +19,47 @@ uin8_t ADXL345_Initialise(ADXL345 *dev, I2C_HandleTypeDef *i2cHandle){
 	dev->acc_mps2[1] 		= 0.0f;
 	dev->acc_mps2[2] 		= 0.0f;
 
-	dev->temp_C 			= 0.0f;
 
 	/* Store number of transactions errors (to be returned at the end of the function) */
 	uint8_t errNum = 0;
 	HAL_StatusTypeDef status;
 
+
 	/*
 	 * Check DEV_ID (p.25)
 	 */
 	uint8_t regData;
-	status = ADXL345_ReadRegister(ADXL345_REG_DEVID, &regData);
+	status = ADXL345_ReadRegister(dev, ADXL345_REG_DEVID, &regData);
 	errNum += (status != HAL_OK);
 
+
+	/* Exit if status different */
 	if(regData != ADXL345_DEVID){
 		return 255;
 	}
+
 
 	/*
 	 * SET power mode and rate (BW_RATE) (p.26)
 	 * D4 : LOW_POWER bit = 0 normal operation & 1 low power (noisy)
 	 * D0-D3 : Rate bits ODR (p.15)
-	 * 		100Hz ODR = 0x0A
-	 * 		200Hz ODR = 0x0B
-	 * 		400HZ ODR = 0x0C
+	 * 			100Hz ODR = 0xA
+	 * 			200Hz ODR = 0xB
+	 * 			400HZ ODR = 0xC
 	 */
 	regData = 0x0C;
 	status = ADXL345_WriteRegister(dev, ADXL345_REG_BW_RATE, &regData);
 	errNum += (status != HAL_OK);
 
+
 	/*
 	 * SET ADXL to MEASURING MODE (POWER_CTL) (p.26)
 	 *
 	 * Bits Definition (p.26)
-	 * D4 : Sleep Mode (Needs setup for THRESH_INACT and TIME_INACT)
+	 * D4 : AUTO_SLEEP (Needs setup for THRESH_INACT and TIME_INACT)
 	 * D3 : Measure = 1 (measuring mode on)
 	 * D2 : Sleep (1 puts ADXL into sleep mode)
-	 * D0-D1 : Wakeup
+	 * D0-D1 : Wakeup bits
 	 *
 	 * Selected D3 = 1 - measuring mode on
 	 */
@@ -60,40 +67,43 @@ uin8_t ADXL345_Initialise(ADXL345 *dev, I2C_HandleTypeDef *i2cHandle){
 	status = ADXL345_WriteRegister(dev, ADXL345_REG_POWER_CTL, &regData);
 	errNum += (status != HAL_OK);
 
-	/*
-	 * Turn on DATA_READY Interrupt (INT_ENABLE) (p.26)
-	 * D7 : DATA_READY interrupt function (set to 1 if active)
-	 */
-	regData = 0x80;
-	status = ADXL345_WriteRegister(dev, ADXL345_REG_INT_ENABLE, &regData);
-	errNum += (status != HAL_OK);
-
 
 	/* SET on which bit to have the DATA_READY interrupt (INT_MAP)
-	 * D7: If 0 -> it will be on INT1, if set on INT2
-	 * I set it to be on INT1
+	 * D7 (0): If 0 -> it will be on INT1, if set on INT2
+	 *
 	 */
 	regData = 0x00;
 	status = ADXL345_WriteRegister(dev, ADXL345_REG_INT_MAP, &regData);
 	errNum += (status != HAL_OK);
 
 
-
-
 	/*
 	 * SET data format (DATA_FORMAT) (p.26)
-	 * D5: INT_INVERT - 0 sets the interrupts to active high; 1 - active low
-	 * D3: FULL_RES mode
-	 * D2: Justify Bit - TODO understand it
-	 * D0-D1: Range Bits
+	 * D5: INT_INVERT (0)- 0 sets the interrupts to active high; 1 - active low
+	 * D3: FULL_RES mode (0)
+	 * D2: Justify Bit (1)
+	 * 				0: right justified with sign extension
+	 * 				1: left justified
+	 * D0-D1: Range Bits (01)
 	 * 			00 : +-2g
 	 * 			01 : +-4g
 	 * 			10 : +-8g
 	 * 			11 : +-16g
 	 */
-	regData = 0x;
+	regData = 0x05;
+	status = ADXL345_WriteRegister(dev, ADXL345_REG_DATA_FORMAT, &regData);
+	errNum += (status != HAL_OK);
 
-	/* TODO set DATA FORMAT
+
+	/*
+	 * Enable DATA_READY Interrupt (INT_ENABLE) (p.26)
+	 * D7 : DATA_READY interrupt function (set to 1 if active)
+	 * It is recommended that interrupts be configured before enabling their outputs
+	 */
+	regData = 0x80;
+	status = ADXL345_WriteRegister(dev, ADXL345_REG_INT_ENABLE, &regData);
+	errNum += (status != HAL_OK);
+
 
 	/* END OF INITIALISATION */
 
@@ -103,6 +113,39 @@ uin8_t ADXL345_Initialise(ADXL345 *dev, I2C_HandleTypeDef *i2cHandle){
 }
 
 
+/*
+ * DATA AQUISITION
+ */
+HAL_StatusTypeDef ADXL345_ReadAcceleration(ADXL345 *dev){
+
+	/* Datasheet p.27 */
+	/*
+	 * Read raw values from acceleration (x,y,z -> 10 bits each)
+	 */
+	uint8_t regData[6];
+
+	/* Read 6 registers starting with 0x32 to 0x37 */
+	HAL_StatusTypeDef status = ADXL345_ReadRegisters(dev, ADXL345_REG_DATAX0, regData, 6);
+
+	/*
+	 * Combine register values to give raw (UNSIGNED) accelerometer readings (10 bits each)
+	 */
+
+	int16_t accRawSigned[3];
+
+	/* DATAX0 is the LSB and DATAX1 is the MSB */
+	accRawSigned[0] = ((((int16_t) regData[1] << 16) | ((int16_t) (regData[0] & 0x03)) << 8) >> 6); // X-axis
+	accRawSigned[1] = ((((int16_t) regData[3] << 16) | ((int16_t) (regData[2] & 0x03)) << 8) >> 6); // Y-axis
+	accRawSigned[2] = ((((int16_t) regData[5] << 16) | ((int16_t) (regData[4] & 0x03)) << 8) >> 6); // X-axis
+
+
+	/* Convert to mps^2 (given range setting of +-4g) */
+	dev->acc_mps2[0] = CONST4G10B * accRawSigned[0];
+	dev->acc_mps2[1] = CONST4G10B * accRawSigned[1];
+	dev->acc_mps2[2] = CONST4G10B * accRawSigned[2];
+
+	return status;
+}
 
 
 /*
@@ -117,6 +160,6 @@ HAL_StatusTypeDef ADXL345_ReadRegisters(ADXL345 *dev, uint8_t reg, uint8_t *data
 }
 
 HAL_StatusTypeDef ADXL345_WriteRegister(ADXL345 *dev, uint8_t reg, uint8_t *data){
-	return HAL_I2C_Mem_Write(dev->i2cHandle, ADXL345_I2C_ADDR, reg, I2C_MEMADD_SIZE_8BIT, data, len, HAL_MAX_DELAY);
+	return HAL_I2C_Mem_Write(dev->i2cHandle, ADXL345_I2C_ADDR, reg, I2C_MEMADD_SIZE_8BIT, data, 1, HAL_MAX_DELAY);
 }
 
