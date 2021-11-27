@@ -1,5 +1,5 @@
 
-adxl345_library.elf:     file format elf32-littlearm
+adxl345_lib_v2.elf:     file format elf32-littlearm
 
 Sections:
 Idx Name          Size      VMA       LMA       File off  Algn
@@ -39,11 +39,11 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING, OCTETS
  17 .debug_line   00014bdc  00000000  00000000  00064458  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    000ce021  00000000  00000000  00079034  2**0
+ 18 .debug_str    000cdfdf  00000000  00000000  00079034  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000053  00000000  00000000  00147055  2**0
+ 19 .comment      00000053  00000000  00000000  00147013  2**0
                   CONTENTS, READONLY
- 20 .debug_frame  00005050  00000000  00000000  001470a8  2**2
+ 20 .debug_frame  00005050  00000000  00000000  00147068  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:

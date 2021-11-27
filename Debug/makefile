@@ -14,6 +14,7 @@ RM := rm -rf
 -include Middlewares/ST/STM32_USB_Device_Library/Core/Src/subdir.mk
 -include Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/subdir.mk
 -include Drivers/STM32F4xx_HAL_Driver/Src/subdir.mk
+-include Core/Startup/subdir.mk
 -include Core/Src/subdir.mk
 -include subdir.mk
 -include objects.mk
@@ -65,7 +66,7 @@ main-build: adxl345_library.elf secondary-outputs
 
 # Tool invocations
 adxl345_library.elf: $(OBJS) $(USER_OBJS) /home/cristian/STM32CubeIDE/workspace_1.7.0/adxl345_library/STM32F446RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "adxl345_library.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/home/cristian/STM32CubeIDE/workspace_1.7.0/adxl345_library/STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="adxl345_library.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+	arm-none-eabi-gcc -o "adxl345_library.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/home/cristian/STM32CubeIDE/workspace_1.7.0/adxl345_library/STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="adxl345_library.map" -Wl,--gc-sections -static -u _printf_float --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
