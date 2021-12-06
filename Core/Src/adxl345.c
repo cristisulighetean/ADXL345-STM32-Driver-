@@ -1,14 +1,14 @@
 /*
- * adxl345.c
  *
- *  Created on: Nov 15, 2021
- *      Author: cristian
+ * ADXL345 Accelerometer I2C Driver
+ *
+ * Author: Cristian Sulighetean
+ * Created: 15 November 2021
+ *
+ * Version 1.0 - First release
  */
 
 #include "adxl345.h"
-
-/* Conversion constant for 4g range and 10 bits resolution */
-#define CONST4G10B			0.076640625f
 
 uint8_t ADXL345_Initialise(ADXL345 *dev, I2C_HandleTypeDef *i2cHandle){
 
@@ -47,24 +47,8 @@ uint8_t ADXL345_Initialise(ADXL345 *dev, I2C_HandleTypeDef *i2cHandle){
 	 * 			200Hz ODR = 0xB
 	 * 			400HZ ODR = 0xC
 	 */
-	regData = 0x0C;
+	regData = 0x0B;
 	status = ADXL345_WriteRegister(dev, ADXL345_REG_BW_RATE, &regData);
-	errNum += (status != HAL_OK);
-
-
-	/*
-	 * SET ADXL to MEASURING MODE (POWER_CTL) (p.26)
-	 *
-	 * Bits Definition (p.26)
-	 * D4 : AUTO_SLEEP (Needs setup for THRESH_INACT and TIME_INACT)
-	 * D3 : Measure = 1 (measuring mode on)
-	 * D2 : Sleep (1 puts ADXL into sleep mode)
-	 * D0-D1 : Wakeup bits
-	 *
-	 * Selected D3 = 1 - measuring mode on
-	 */
-	regData = 0x08;
-	status = ADXL345_WriteRegister(dev, ADXL345_REG_POWER_CTL, &regData);
 	errNum += (status != HAL_OK);
 
 
@@ -79,8 +63,11 @@ uint8_t ADXL345_Initialise(ADXL345 *dev, I2C_HandleTypeDef *i2cHandle){
 
 	/*
 	 * SET data format (DATA_FORMAT) (p.26)
+	 * D7: SELF_TEST 1-ON
+	 * D6: SPI - a value of 1 sets the device into 3-wire SPI mode
 	 * D5: INT_INVERT (0)- 0 sets the interrupts to active high; 1 - active low
-	 * D3: FULL_RES mode (0)
+	 * D4: 0
+	 * D3: FULL_RES mode (1)
 	 * D2: Justify Bit (1)
 	 * 				0: right justified with sign extension
 	 * 				1: left justified
@@ -89,21 +76,52 @@ uint8_t ADXL345_Initialise(ADXL345 *dev, I2C_HandleTypeDef *i2cHandle){
 	 * 			01 : +-4g
 	 * 			10 : +-8g
 	 * 			11 : +-16g
+	 *
+	 * My selection: Full resolution and 4g (lsb on pos D5 which means >> 5)
 	 */
-	regData = 0x05;
+	regData = 0b00001101;
 	status = ADXL345_WriteRegister(dev, ADXL345_REG_DATA_FORMAT, &regData);
 	errNum += (status != HAL_OK);
 
+	/*
+	 * Enable LOW Power mode
+	 * TODO
+	 *
+	 * SET Low power bit (Bit 4) in BW_RATE register (Address 0x2C)
+	 */
+
 
 	/*
-	 * Enable DATA_READY Interrupt (INT_ENABLE) (p.26)
-	 * D7 : DATA_READY interrupt function (set to 1 if active)
-	 * It is recommended that interrupts be configured before enabling their outputs
+	 * Set FIFO Modes
+	 * TODO
 	 */
-	regData = 0x80;
+
+	/*
+	* Enable DATA_READY Interrupt (INT_ENABLE) (p.27)
+	* D7 : DATA_READY interrupt function (set to 1 if active)
+	* It is recommended that interrupts be configured before enabling their outputs
+	*/
+	regData = 0xFF;
 	status = ADXL345_WriteRegister(dev, ADXL345_REG_INT_ENABLE, &regData);
 	errNum += (status != HAL_OK);
 
+	/*
+	* SET ADXL to MEASURING MODE (POWER_CTL) (p.26)
+	*
+	* Bits Definition (p.26)
+	* D7 : 0
+	* D6 : 0
+	* D5 : Link bit
+	* D4 : AUTO_SLEEP (Needs setup for THRESH_INACT and TIME_INACT)
+	* D3 : Measure = 1 (measuring mode on)
+	* D2 : Sleep (1 puts ADXL into sleep mode)
+	* D0-D1 : Wakeup bits
+	*
+	* Selected D3 = 1 - measuring mode on
+	*/
+	regData = 0x08;
+	status = ADXL345_WriteRegister(dev, ADXL345_REG_POWER_CTL, &regData);
+	errNum += (status != HAL_OK);
 
 	/* END OF INITIALISATION */
 
@@ -133,16 +151,16 @@ HAL_StatusTypeDef ADXL345_ReadAcceleration(ADXL345 *dev){
 
 	int16_t accRawSigned[3];
 
-	/* DATAX0 is the LSB and DATAX1 is the MSB */
-	accRawSigned[0] = ((((int16_t) regData[1] << 16) | ((int16_t) (regData[0] & 0x03)) << 8) >> 6); // X-axis
-	accRawSigned[1] = ((((int16_t) regData[3] << 16) | ((int16_t) (regData[2] & 0x03)) << 8) >> 6); // Y-axis
-	accRawSigned[2] = ((((int16_t) regData[5] << 16) | ((int16_t) (regData[4] & 0x03)) << 8) >> 6); // X-axis
+	/* DATAX0 is the LSB and DATAX1 is the MSB (mask the last 3 bits of 2nd reg)*/
+	accRawSigned[0] = ((((int16_t) regData[1] << 8) | ((int16_t) (regData[0] & 0xE0))) >> 5); // X-axis
+	accRawSigned[1] = ((((int16_t) regData[3] << 8) | ((int16_t) (regData[2] & 0xE0))) >> 5); // Y-axis
+	accRawSigned[2] = ((((int16_t) regData[5] << 8) | ((int16_t) (regData[4] & 0xE0))) >> 5); // X-axis
 
 
 	/* Convert to mps^2 (given range setting of +-4g) */
-	dev->acc_mps2[0] = CONST4G10B * accRawSigned[0];
-	dev->acc_mps2[1] = CONST4G10B * accRawSigned[1];
-	dev->acc_mps2[2] = CONST4G10B * accRawSigned[2];
+	dev->acc_mps2[0] = ADXL345_MG2G_MULTIPLIER * accRawSigned[0];
+	dev->acc_mps2[1] = ADXL345_MG2G_MULTIPLIER * accRawSigned[1];
+	dev->acc_mps2[2] = ADXL345_MG2G_MULTIPLIER * accRawSigned[2];
 
 	return status;
 }

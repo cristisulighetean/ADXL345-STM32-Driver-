@@ -66,7 +66,7 @@ main-build: adxl345_lib.elf secondary-outputs
 
 # Tool invocations
 adxl345_lib.elf: $(OBJS) $(USER_OBJS) /home/cristian/STM32CubeIDE/workspace_1.7.0/adxl345_lib/STM32F446RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "adxl345_lib.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/home/cristian/STM32CubeIDE/workspace_1.7.0/adxl345_lib/STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="adxl345_lib.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+	arm-none-eabi-gcc -o "adxl345_lib.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/home/cristian/STM32CubeIDE/workspace_1.7.0/adxl345_lib/STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="adxl345_lib.map" -Wl,--gc-sections -static -u _printf_float --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

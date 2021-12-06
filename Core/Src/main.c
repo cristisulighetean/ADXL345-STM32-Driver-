@@ -25,7 +25,6 @@
 /* USER CODE BEGIN Includes */
 // Included in order to use the usb virtual com port
 #include "usbd_cdc_if.h"
-
 #include "adxl345.h"
 
 /* USER CODE END Includes */
@@ -37,7 +36,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define SAMPLE_TIME_LOG_MS 100
-#define SAMPLE_TIME_LED_MS 100
+#define SAMPLE_TIME_LED_MS 500
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -66,12 +65,18 @@ static void MX_I2C1_Init(void);
 /* USER CODE BEGIN 0 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 
-	if(GPIO_Pin == ACC_INT_Pin){
-
-		/* Set data ready flag (checked in main while() loop) */
-		accDataReady = 1;
-	}
+	if ( GPIO_Pin == ACC_INT_Pin ) {
+			/* Set data ready flag (checked in main while() loop) */
+			accDataReady = 1;
+		}
+	/* Check Blue Push button if presses */
+	if ( GPIO_Pin == BluePush_Pin ) {
+			/* Toggle LED */
+			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+			accDataReady = 1;
+			}
 }
+
 /* USER CODE END 0 */
 
 /**
@@ -132,6 +137,9 @@ int main(void)
 	  /* Sample accelerometer if data ready flag has been set via interrupt */
 	  if(accDataReady){
 
+		  /* Read acceleration data */
+		  ADXL345_ReadAcceleration(&acc);
+
 		  /* Clear flag */
 		  accDataReady = 0;
 	  }
@@ -150,12 +158,12 @@ int main(void)
 	  }
 
 	  /* Toggle LED */
-	  if ((HAL_GetTick() - timerLED) >= SAMPLE_TIME_LED_MS){
-
-		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-
-		  timerLED += SAMPLE_TIME_LED_MS;
-	  }
+//	  if ((HAL_GetTick() - timerLED) >= SAMPLE_TIME_LED_MS){
+//
+//		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+//
+//		  timerLED += SAMPLE_TIME_LED_MS;
+//	  }
 
   }
   /* USER CODE END 3 */
@@ -257,15 +265,15 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : B1_Pin */
-  GPIO_InitStruct.Pin = B1_Pin;
+  /*Configure GPIO pin : BluePush_Pin */
+  GPIO_InitStruct.Pin = BluePush_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(BluePush_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : ACC_INT_Pin */
   GPIO_InitStruct.Pin = ACC_INT_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(ACC_INT_GPIO_Port, &GPIO_InitStruct);
 
@@ -287,6 +295,9 @@ static void MX_GPIO_Init(void)
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
 }
 
