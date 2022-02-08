@@ -146,16 +146,15 @@ HAL_StatusTypeDef ADXL345_ReadAcceleration(ADXL345 *dev){
 	HAL_StatusTypeDef status = ADXL345_ReadRegisters(dev, ADXL345_REG_DATAX0, regData, 6);
 
 	/*
-	 * Combine register values to give raw (UNSIGNED) accelerometer readings (10 bits each)
+	 * Combine register values to give raw (UNSIGNED) readings (10 bits each)
 	 */
 
 	int16_t accRawSigned[3];
 
 	/* DATAX0 is the LSB and DATAX1 is the MSB (mask the last 3 bits of 2nd reg)*/
-	accRawSigned[0] = ((((int16_t) regData[1] << 8) | ((int16_t) (regData[0] & 0xE0))) >> 5); // X-axis
-	accRawSigned[1] = ((((int16_t) regData[3] << 8) | ((int16_t) (regData[2] & 0xE0))) >> 5); // Y-axis
-	accRawSigned[2] = ((((int16_t) regData[5] << 8) | ((int16_t) (regData[4] & 0xE0))) >> 5); // X-axis
-
+	accRawSigned[0] = ((int16_t)(((int16_t) regData[1] << 8) | ((int16_t) (regData[0] & 0xE0))) >> 5); // X-axis
+	accRawSigned[1] = ((int16_t)(((int16_t) regData[3] << 8) | ((int16_t) (regData[2] & 0xE0))) >> 5); // Y-axis
+	accRawSigned[2] = ((int16_t)(((int16_t) regData[5] << 8) | ((int16_t) (regData[4] & 0xE0))) >> 5); // X-axis
 
 	/* Convert to mps^2 (given range setting of +-4g) */
 	dev->acc_mps2[0] = ADXL345_MG2G_MULTIPLIER * accRawSigned[0];

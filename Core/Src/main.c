@@ -36,7 +36,6 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define SAMPLE_TIME_LOG_MS 100
-#define SAMPLE_TIME_LED_MS 500
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -120,13 +119,11 @@ int main(void)
 
   /* Timers */
   uint32_t timerLog;
-  uint32_t timerLED;
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  accDataReady = 0;
 
   while (1)
   {
@@ -134,17 +131,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-	  /* Sample accelerometer if data ready flag has been set via interrupt */
-	  if(accDataReady){
-
-		  /* Read acceleration data */
-		  ADXL345_ReadAcceleration(&acc);
-
-		  /* Clear flag */
-		  accDataReady = 0;
-	  }
-
-	  /* Send accelerometer readings via virtual COM port (USB) */
+	  /* Sample & send accelerometer readings via virtual COM port (USB) */
 	  if ((HAL_GetTick() - timerLog) >= SAMPLE_TIME_LOG_MS){
 
 		  ADXL345_ReadAcceleration(&acc);
@@ -337,4 +324,3 @@ void assert_failed(uint8_t *file, uint32_t line)
 }
 #endif /* USE_FULL_ASSERT */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
