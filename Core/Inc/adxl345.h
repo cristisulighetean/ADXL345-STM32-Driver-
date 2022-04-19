@@ -8,13 +8,10 @@
  * Version 1.0 - First release
  */
 
-/* Include in case we have already added the driver
- * files somewhere else
- */
 #ifndef ADXL345_I2C_DRIVER_H
 #define ADXL345_I2C_DRIVER_H
 
-// Include specific HAL library for I2C functions
+// Include MCU specific HAL library
 #include "stm32f4xx_hal.h"
 
 /* ===================================================================
@@ -68,6 +65,7 @@
 /**
  * @brief Used with register 0x2C (ADXL345_REG_BW_RATE) to set bandwidth
  * 
+ * Not used at the moment
  */
 
 typedef enum
@@ -94,6 +92,7 @@ typedef enum
 /**
  * @brief  Used with register 0x31 (ADXL345_REG_DATA_FORMAT) to set g range
  *
+ * Not used at the moment
  */
 typedef enum {
   ADXL345_RANGE_16_G = 0b11, ///< +/- 16g
