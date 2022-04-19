@@ -1,5 +1,4 @@
 /*
- *
  * ADXL345 Accelerometer I2C Driver
  *
  * Author: Cristian Sulighetean
@@ -10,15 +9,24 @@
 
 #include "adxl345.h"
 
-uint8_t ADXL345_Initialise(ADXL345 *dev, I2C_HandleTypeDef *i2cHandle){
 
+/*
+ * @brief Initialises the module
+ *
+ * @param[in]  dev Struct pointer with the i2c configuration and acc values
+ * @param[in]  i2cHandle i2c handle pointer for the HAL driver
+ *
+ * @return errNum Returns the number of occured errors
+ *
+ * The sensor setup will be taken care in the initalisation function
+ */
+uint8_t ADXL345_Initialise(ADXL345 *dev, I2C_HandleTypeDef *i2cHandle){
 	/* Set struct parameters */
 	dev->i2cHandle 			= i2cHandle;
 
 	dev->acc_mps2[0] 		= 0.0f;
 	dev->acc_mps2[1] 		= 0.0f;
 	dev->acc_mps2[2] 		= 0.0f;
-
 
 	/* Store number of transactions errors (to be returned at the end of the function) */
 	uint8_t errNum = 0;
@@ -37,7 +45,6 @@ uint8_t ADXL345_Initialise(ADXL345 *dev, I2C_HandleTypeDef *i2cHandle){
 	if(regData != ADXL345_DEVID){
 		return 255;
 	}
-
 
 	/*
 	 * SET power mode and rate (BW_RATE) (p.26)
@@ -132,7 +139,13 @@ uint8_t ADXL345_Initialise(ADXL345 *dev, I2C_HandleTypeDef *i2cHandle){
 
 
 /*
- * DATA AQUISITION
+ * @brief Non-blocking reading of acceleration data
+ *
+ * @param[in]  dev Struct pointer with the i2c configuration and acc values
+ *
+ * @return status Return status of the i2c read operation
+ *
+ * Reads acceleration data into the given dev struct
  */
 HAL_StatusTypeDef ADXL345_ReadAcceleration(ADXL345 *dev){
 
@@ -166,17 +179,49 @@ HAL_StatusTypeDef ADXL345_ReadAcceleration(ADXL345 *dev){
 
 
 /*
- * LOW-LEVEL FUNCTIONS
+ * @brief Read single register
+ *
+ * @param[in]  dev Struct pointer with the i2c configuration and acc values
+ * @param[in]  reg Register pointer to read
+ * @param[in] data pointer to store the read values
+ *
+ * @return Status value of the HAL mem read function
+ *
+ * Low level function to read a register via the HAL library
  */
-
 HAL_StatusTypeDef ADXL345_ReadRegister(ADXL345 *dev, uint8_t reg, uint8_t *data){
 	return HAL_I2C_Mem_Read(dev->i2cHandle, ADXL345_I2C_ADDR, reg, I2C_MEMADD_SIZE_8BIT, data, 1, HAL_MAX_DELAY);
 }
+
+
+/*
+ * @brief Read multiple registers
+ *
+ * @param[in]  dev Struct pointer with the i2c configuration and acc values
+ * @param[in]  reg Register pointer to read
+ * @param[in] data pointer to store the read values
+ * @param[in] len length of the data to be read
+ *
+ * @return Status value of the HAL mem read function
+ *
+ * Low level function to read multiple registers via the HAL library
+ */
 HAL_StatusTypeDef ADXL345_ReadRegisters(ADXL345 *dev, uint8_t reg, uint8_t *data, uint8_t len){
 	return HAL_I2C_Mem_Read(dev->i2cHandle, ADXL345_I2C_ADDR, reg, I2C_MEMADD_SIZE_8BIT, data, len, HAL_MAX_DELAY);
 }
 
+
+/*
+ * @brief Write single register
+ *
+ * @param[in]  dev Struct pointer with the i2c configuration and acc values
+ * @param[in]  reg Register pointer to write
+ * @param[in] data pointer with the data to be written
+ *
+ * @return Status value of the HAL mem read function
+ *
+ * Low level function to write a single register via the HAL library
+ */
 HAL_StatusTypeDef ADXL345_WriteRegister(ADXL345 *dev, uint8_t reg, uint8_t *data){
 	return HAL_I2C_Mem_Write(dev->i2cHandle, ADXL345_I2C_ADDR, reg, I2C_MEMADD_SIZE_8BIT, data, 1, HAL_MAX_DELAY);
 }
-
